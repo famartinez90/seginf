@@ -33,7 +33,23 @@
 \usepackage{pdfpages}
 \usepackage{titlesec}
 \usepackage[margin=1cm]{subcaption}
+\usepackage{wrapfig}
 
+\definecolor{newblack}{rgb}{0.13,0.13,0.13}
+
+\lstset{
+	backgroundcolor=\color{newblack},
+	basicstyle=\ttfamily\color{white},
+	columns=fullflexible,
+	frame=single,
+	breaklines=true,
+	postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+}
+
+\lstdefinestyle{base}{
+	language=bash,
+	moredelim=**[is][\color{orange}]{@}{@}
+}
 
 \color{black}
 

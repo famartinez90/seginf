@@ -5,3 +5,5 @@ informe/informe.out
 informe/informe.pdf
 informe/informe.synctex.gz
 informe/informe.toc
+informe/*.fdb_latexmk
+informe/*.fls
