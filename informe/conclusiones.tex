@@ -1,0 +1,11 @@
+\section{Conclusiones}
+
+En este trabajo, demostramos que si se controla un nodo en la comunicación con internet, es posible producir alteraciones importantes en el trafico de información utilizando herramientas accesibles para cualquier usuarios de Kile, las cuales pueden atentar contra la confidencialidad y la integridad de los datos.\\
+
+El downgrade de conexiones HTTPS a HTTP es un ataque más sutil que intentar enviar un certificado falso a la víctima, pues existen muchos navegadores modernos que por defecto no informan al usuario cuando se está enviando información por un canal no seguro. Si bien el éxito de este ataque es estadístico, pues requiere que la víctima no verifique si la conexion no es segura, la ausencia de un mecanismo automático en la validación peligra a los usuarios desinformados o descuidados.\\
+
+Además, la utilización alternada de http y https en una misma comunicación en aplicaciones para celulares, proporcionan un medio óptimo para la alteración de contenidos, ya que dichas aplicaciones brindan menos información a los usuarios acerca del tráfico que generan hacia internet con respecto a los navegadores web.\\
+
+Esto demuestra la alta capacidad por parte de los nodos de la red para sniffear y/o alterar contenido en forma discreta, en sitios que la mayoría de los usuarios consideran como seguros. Por eso, al navegar por internet través de accesos de WiFi desconocidos, o utilizando la red Tor, se debe tener en cuenta que la información enviada o recibida a través del mismo puede estar comprometida.\\
+
+Por último, es notable destacar la detección de aplicaciones para celulares que generan trafico inseguro sin que esto represente una ventaja clara, lo cual se deba muy probablemente a la falta de capacitación en este aspecto de quienes desarrollaron y/o diseñaron la aplicación. Además, se pueden percibir aplicaciones que deliberadamente extraen metainformación acerca del dispositivo, lo cual no solo puede generar una sobrecarga de la red, sino que puede facilitar la detección de vulnerabilidades del equipo.
